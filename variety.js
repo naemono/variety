@@ -9,11 +9,11 @@ Please see https://github.com/variety/variety for details.
 
 Released by Maypop Inc, © 2012-2016, under the MIT License. */
 
-(function () {
+(function() {
   'use strict'; // wraps everything for which we can use strict mode -JC
 
   var log = function(message) {
-    if(!__quiet) { // mongo shell param, coming from https://github.com/mongodb/mongo/blob/5fc306543cd3ba2637e5cb0662cc375f36868b28/src/mongo/shell/dbshell.cpp#L624
+    if (!__quiet) { // mongo shell param, coming from https://github.com/mongodb/mongo/blob/5fc306543cd3ba2637e5cb0662cc375f36868b28/src/mongo/shell/dbshell.cpp#L624
       print(message);
     }
   };
@@ -31,37 +31,37 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
   }
 
   var knownDatabases = db.adminCommand('listDatabases').databases;
-  if(typeof knownDatabases !== 'undefined') { // not authorized user receives error response (json) without databases key
-    knownDatabases.forEach(function(d){
-      if(db.getSisterDB(d.name).getCollectionNames().length > 0) {
+  if (typeof knownDatabases !== 'undefined') { // not authorized user receives error response (json) without databases key
+    knownDatabases.forEach(function(d) {
+      if (db.getSisterDB(d.name).getCollectionNames().length > 0) {
         dbs.push(d.name);
       }
-      if(db.getSisterDB(d.name).getCollectionNames().length === 0) {
+      if (db.getSisterDB(d.name).getCollectionNames().length === 0) {
         emptyDbs.push(d.name);
       }
     });
 
     if (emptyDbs.indexOf(db.getName()) !== -1) {
-      throw 'The database specified ('+ db +') is empty.\n'+
-          'Possible database options are: ' + dbs.join(', ') + '.';
+      throw 'The database specified (' + db + ') is empty.\n' +
+        'Possible database options are: ' + dbs.join(', ') + '.';
     }
 
     if (dbs.indexOf(db.getName()) === -1) {
-      throw 'The database specified ('+ db +') does not exist.\n'+
-          'Possible database options are: ' + dbs.join(', ') + '.';
+      throw 'The database specified (' + db + ') does not exist.\n' +
+        'Possible database options are: ' + dbs.join(', ') + '.';
     }
   }
 
   var collNames = db.getCollectionNames().join(', ');
   if (typeof collection === 'undefined') {
-    throw 'You have to supply a \'collection\' variable, à la --eval \'var collection = "animals"\'.\n'+
-        'Possible collection options for database specified: ' + collNames + '.\n'+
-        'Please see https://github.com/variety/variety for details.';
+    throw 'You have to supply a \'collection\' variable, à la --eval \'var collection = "animals"\'.\n' +
+      'Possible collection options for database specified: ' + collNames + '.\n' +
+      'Please see https://github.com/variety/variety for details.';
   }
 
   if (db.getCollection(collection).count() === 0) {
-    throw 'The collection specified (' + collection + ') in the database specified ('+ db +') does not exist or is empty.\n'+
-        'Possible collection options for database specified: ' + collNames + '.';
+    throw 'The collection specified (' + collection + ') in the database specified (' + db + ') does not exist or is empty.\n' +
+      'Possible collection options for database specified: ' + collNames + '.';
   }
 
   var readConfig = function(configProvider) {
@@ -69,13 +69,15 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
     var read = function(name, defaultValue) {
       var value = typeof configProvider[name] !== 'undefined' ? configProvider[name] : defaultValue;
       config[name] = value;
-      log('Using '+name+' of ' + tojson(value));
+      log('Using ' + name + ' of ' + tojson(value));
     };
     read('collection', null);
     read('query', {});
     read('limit', db.getCollection(config.collection).find(config.query).count());
     read('maxDepth', 99);
-    read('sort', {_id: -1});
+    read('sort', {
+      _id: -1
+    });
     read('outputFormat', 'ascii');
     read('persistResults', false);
     read('resultsDatabase', 'varietyResults');
@@ -87,7 +89,10 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
     read('arrayEscape', 'XX');
 
     //Translate excludeSubkeys to set like object... using an object for compatibility...
-    config.excludeSubkeys = config.excludeSubkeys.reduce(function (result, item) { result[item+'.'] = true; return result; }, {});
+    config.excludeSubkeys = config.excludeSubkeys.reduce(function(result, item) {
+      result[item + '.'] = true;
+      return result;
+    }, {});
 
     return config;
   };
@@ -95,7 +100,9 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
   var config = readConfig(this);
 
   var PluginsClass = function(context) {
-    var parsePath = function(val) { return val.slice(-3) !== '.js' ? val + '.js' : val;};
+    var parsePath = function(val) {
+      return val.slice(-3) !== '.js' ? val + '.js' : val;
+    };
     var parseConfig = function(val) {
       var config = {};
       val.split('&').reduce(function(acc, val) {
@@ -106,55 +113,74 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
       return config;
     };
 
-    if(typeof context.plugins !== 'undefined') {
+    if (typeof context.plugins !== 'undefined') {
       this.plugins = context.plugins.split(',')
-      .map(function(path){return path.trim();})
-      .map(function(definition){
-        var path = parsePath(definition.split('|')[0]);
-        var config = parseConfig(definition.split('|')[1] || '');
-        context.module = context.module || {};
-        load(path);
-        var plugin = context.module.exports;
-        plugin.path = path;
-        if(typeof plugin.init === 'function') {
-          plugin.init(config);
-        }
-        return plugin;
-      }, this);
+        .map(function(path) {
+          return path.trim();
+        })
+        .map(function(definition) {
+          var path = parsePath(definition.split('|')[0]);
+          var config = parseConfig(definition.split('|')[1] || '');
+          context.module = context.module || {};
+          load(path);
+          var plugin = context.module.exports;
+          plugin.path = path;
+          if (typeof plugin.init === 'function') {
+            plugin.init(config);
+          }
+          return plugin;
+        }, this);
     } else {
       this.plugins = [];
     }
 
     this.execute = function(methodName) {
       var args = Array.prototype.slice.call(arguments, 1);
-      var applicablePlugins = this.plugins.filter(function(plugin){return typeof plugin[methodName] === 'function';});
+      var applicablePlugins = this.plugins.filter(function(plugin) {
+        return typeof plugin[methodName] === 'function';
+      });
       return applicablePlugins.map(function(plugin) {
         return plugin[methodName].apply(plugin, args);
       });
     };
 
-    log('Using plugins of ' + tojson(this.plugins.map(function(plugin){return plugin.path;})));
+    log('Using plugins of ' + tojson(this.plugins.map(function(plugin) {
+      return plugin.path;
+    })));
   };
 
   var $plugins = new PluginsClass(this);
   $plugins.execute('onConfig', config);
 
+  var analyzeArray = function(array) {
+    for (var i in array) {
+      var typeInArray = varietyTypeOf(array[i]);
+      if (typeInArray != 'Array') {
+        return 'Array.' + typeInArray;
+      } else {
+        return analyzeArray(array[i]);
+      }
+    }
+  };
+
   var varietyTypeOf = function(thing) {
-    if (typeof thing === 'undefined') { throw 'varietyTypeOf() requires an argument'; }
+    if (typeof thing === 'undefined') {
+      throw 'varietyTypeOf() requires an argument';
+    }
 
     if (typeof thing !== 'object') {
-    // the messiness below capitalizes the first letter, so the output matches
-    // the other return values below. -JC
+      // the messiness below capitalizes the first letter, so the output matches
+      // the other return values below. -JC
       var typeofThing = typeof thing; // edgecase of JSHint's "singleGroups"
       return typeofThing[0].toUpperCase() + typeofThing.slice(1);
     } else {
       if (thing && thing.constructor === Array) {
-        return 'Array';
+        return analyzeArray(thing);
       } else if (thing === null) {
         return 'null';
       } else if (thing instanceof Date) {
         return 'Date';
-      } else if(thing instanceof NumberLong) {
+      } else if (thing instanceof NumberLong) {
         return 'NumberLong';
       } else if (thing instanceof ObjectId) {
         return 'ObjectId';
@@ -184,29 +210,29 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
       var isArray = Array.isArray(v);
       var isObject = typeof v === 'object';
       var specialObject = v instanceof Date ||
-                        v instanceof ObjectId ||
-                        v instanceof BinData ||
-                        v instanceof NumberLong;
+        v instanceof ObjectId ||
+        v instanceof BinData ||
+        v instanceof NumberLong;
       return !specialObject && (isArray || isObject);
     }
 
     var arrayRegex = new RegExp('\\.' + config.arrayEscape + '\\d+' + config.arrayEscape + '\\.', 'g');
 
     function serialize(document, parentKey, maxDepth) {
-      if(Object.prototype.hasOwnProperty.call(excludeSubkeys, parentKey.replace(arrayRegex, '.')))
+      if (Object.prototype.hasOwnProperty.call(excludeSubkeys, parentKey.replace(arrayRegex, '.')))
         return;
-      for(var key in document) {
+      for (var key in document) {
         //skip over inherited properties such as string, length, etch
-        if(!document.hasOwnProperty(key)) {
+        if (!document.hasOwnProperty(key)) {
           continue;
         }
         var value = document[key];
-        if(Array.isArray(document))
+        if (Array.isArray(document))
           key = config.arrayEscape + key + config.arrayEscape; //translate unnamed object key from {_parent_name_}.{_index_} to {_parent_name_}.arrayEscape{_index_}arrayEscape.
-        result[parentKey+key] = value;
+        result[parentKey + key] = value;
         //it's an object, recurse...only if we haven't reached max depth
-        if(isHash(value) && maxDepth > 1) {
-          serialize(value, parentKey+key+'.', maxDepth-1);
+        if (isHash(value) && maxDepth > 1) {
+          serialize(value, parentKey + key + '.', maxDepth - 1);
         }
       }
     }
@@ -221,7 +247,7 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
     for (var key in document) {
       var value = document[key];
       key = key.replace(arrayRegex, '.' + config.arrayEscape);
-      if(typeof result[key] === 'undefined') {
+      if (typeof result[key] === 'undefined') {
         result[key] = {};
       }
       var type = varietyTypeOf(value);
@@ -232,10 +258,10 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
 
   var mergeDocument = function(docResult, interimResults) {
     for (var key in docResult) {
-      if(key in interimResults) {
+      if (key in interimResults) {
         var existing = interimResults[key];
 
-        for(var type in docResult[key]) {
+        for (var type in docResult[key]) {
           if (type in existing.types) {
             existing.types[type] = existing.types[type] + 1;
           } else {
@@ -254,7 +280,10 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
             log('Found new key type "' + key + '" type "' + newType + '"');
           }
         }
-        interimResults[key] = {'types': types,'totalOccurrences':1};
+        interimResults[key] = {
+          'types': types,
+          'totalOccurrences': 1
+        };
       }
     }
   };
@@ -262,19 +291,23 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
   var convertResults = function(interimResults, documentsCount) {
     var getKeys = function(obj) {
       var keys = {};
-      for(var key in obj) {
+      for (var key in obj) {
         keys[key] = obj[key];
       }
       return keys;
-    //return keys.sort();
+      //return keys.sort();
     };
     var varietyResults = [];
     //now convert the interimResults into the proper format
-    for(var key in interimResults) {
+    for (var key in interimResults) {
       var entry = interimResults[key];
       varietyResults.push({
-        '_id': {'key':key},
-        'value': {'types':getKeys(entry.types)},
+        '_id': {
+          'key': key
+        },
+        'value': {
+          'types': getKeys(entry.types)
+        },
         'totalOccurrences': entry.totalOccurrences,
         'percentContaining': entry.totalOccurrences * 100 / documentsCount
       });
@@ -296,7 +329,7 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
     return !item._id.key.match(arrayRegex);
   };
 
-// sort desc by totalOccurrences or by key asc if occurrences equal
+  // sort desc by totalOccurrences or by key asc if occurrences equal
   var comparator = function(a, b) {
     var countsDiff = b.totalOccurrences - a.totalOccurrences;
     return countsDiff !== 0 ? countsDiff : a._id.key.localeCompare(b._id.key);
@@ -305,7 +338,7 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
   // extend standard MongoDB cursor of reduce method - call forEach and combine the results
   DBQuery.prototype.reduce = function(callback, initialValue) {
     var result = initialValue;
-    this.forEach(function(obj){
+    this.forEach(function(obj) {
       result = callback(result, obj);
     });
     return result;
@@ -314,18 +347,18 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
   var cursor = db.getCollection(config.collection).find(config.query).sort(config.sort).limit(config.limit);
   var interimResults = cursor.reduce(reduceDocuments, {});
   var varietyResults = convertResults(interimResults, cursor.size())
-  .filter(filter)
-  .sort(comparator);
+    .filter(filter)
+    .sort(comparator);
 
-  if(config.persistResults) {
+  if (config.persistResults) {
     var resultsDB;
     var resultsCollectionName = config.resultsCollection;
 
     if (config.resultsDatabase.indexOf('/') === -1) {
-    // Local database; don't reconnect
+      // Local database; don't reconnect
       resultsDB = db.getMongo().getDB(config.resultsDatabase);
     } else {
-    // Remote database, establish new connection
+      // Remote database, establish new connection
       resultsDB = connect(config.resultsDatabase);
     }
 
@@ -334,7 +367,7 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
     }
 
     // replace results collection
-    log('replacing results collection: '+ resultsCollectionName);
+    log('replacing results collection: ' + resultsCollectionName);
     resultsDB.getCollection(resultsCollectionName).drop();
     resultsDB.getCollection(resultsCollectionName).insert(varietyResults);
   }
@@ -347,7 +380,11 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
       return res !== null ? res[1].length : 1;
     };
 
-    var maxDigits = varietyResults.map(function(value){return significantDigits(value.percentContaining);}).reduce(function(acc,val){return acc>val?acc:val;});
+    var maxDigits = varietyResults.map(function(value) {
+      return significantDigits(value.percentContaining);
+    }).reduce(function(acc, val) {
+      return acc > val ? acc : val;
+    });
 
     var rows = results.map(function(row) {
       var types = [];
@@ -363,11 +400,21 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
 
       return [row._id.key, types, row.totalOccurrences, row.percentContaining.toFixed(Math.min(maxDigits, 20))];
     });
-    var table = [headers, headers.map(function(){return '';})].concat(rows);
-    var colMaxWidth = function(arr, index) {return Math.max.apply(null, arr.map(function(row){return row[index].toString().length;}));};
-    var pad = function(width, string, symbol) { return width <= string.length ? string : pad(width, isNaN(string) ? string + symbol : symbol + string, symbol); };
-    table = table.map(function(row, ri){
-      return '| ' + row.map(function(cell, i) {return pad(colMaxWidth(table, i), cell.toString(), ri === 1 ? '-' : ' ');}).join(' | ') + ' |';
+    var table = [headers, headers.map(function() {
+      return '';
+    })].concat(rows);
+    var colMaxWidth = function(arr, index) {
+      return Math.max.apply(null, arr.map(function(row) {
+        return row[index].toString().length;
+      }));
+    };
+    var pad = function(width, string, symbol) {
+      return width <= string.length ? string : pad(width, isNaN(string) ? string + symbol : symbol + string, symbol);
+    };
+    table = table.map(function(row, ri) {
+      return '| ' + row.map(function(cell, i) {
+        return pad(colMaxWidth(table, i), cell.toString(), ri === 1 ? '-' : ' ');
+      }).join(' | ') + ' |';
     });
     var border = '+' + pad(table[0].length - 2, '', '-') + '+';
     return [border].concat(table).concat(border).join('\n');
@@ -375,8 +422,10 @@ Released by Maypop Inc, © 2012-2016, under the MIT License. */
 
   var pluginsOutput = $plugins.execute('formatResults', varietyResults);
   if (pluginsOutput.length > 0) {
-    pluginsOutput.forEach(function(i){print(i);});
-  } else if(config.outputFormat === 'json') {
+    pluginsOutput.forEach(function(i) {
+      print(i);
+    });
+  } else if (config.outputFormat === 'json') {
     printjson(varietyResults); // valid formatted json output, compressed variant is printjsononeline()
   } else {
     print(createAsciiTable(varietyResults)); // output nice ascii table with results
